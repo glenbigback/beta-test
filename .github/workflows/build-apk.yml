@@ -86,9 +86,10 @@ jobs:
           echo "plugin found at: $SRC"
           cp -r "$SRC" addons/
           rm -rf plugin_dl plugin_unz
+          echo "--- plugin files ---"
+          find addons/godotopenxrvendors -maxdepth 2 -not -name "*.so" -not -name "*.aar" | head -40
           echo "--- plugin export options (for debugging) ---"
-          grep -rhn -E '"(meta_xr_features|xr_features|plugins)/[A-Za-z_]+"|name.*(meta|enable)' addons/godotopenxrvendors/export/*.gd 2>/dev/null | head -40 || true
-          grep -n "compatibility_minimum" addons/godotopenxrvendors/plugin.gdextension || true
+          grep -rn -E "meta_xr_features|enable_meta|xr_features/|quest_support|plugins/" addons/godotopenxrvendors --include=*.gd | cut -c1-200 | head -40 || true
 
       - name: Import the project
         run: godot --headless --path . --import || true
