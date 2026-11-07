@@ -87,7 +87,7 @@ jobs:
           cp -r "$SRC" addons/
           rm -rf plugin_dl plugin_unz
           echo "--- plugin files ---"
-          find addons/godotopenxrvendors -maxdepth 2 -not -name "*.so" -not -name "*.aar" | head -40
+          find addons/godotopenxrvendors -type f -not -name "*.so" -not -name "*.dll" -not -name "*.dylib" | head -60
           echo "--- plugin export options (for debugging) ---"
           grep -rn -E "meta_xr_features|enable_meta|xr_features/|quest_support|plugins/" addons/godotopenxrvendors --include=*.gd | cut -c1-200 | head -40 || true
 
@@ -97,8 +97,12 @@ jobs:
       - name: Export the apk
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "$PRESET_NAME" build/BETA-TEST.apk
+          godot --headless --verbose --path . --export-debug "$PRESET_NAME" build/BETA-TEST.apk > export.log 2>&1 || true
+          grep -i -E "gradle|openxr|vendors|plugin|error|warning" export.log | cut -c1-220 | head -60 || true
           ls -la build
+
+      - name: Check the apk is a real Quest VR app
+        run: python3 tools/check_apk.py build/BETA-TEST.apk || true
 
       - uses: actions/upload-artifact@v4
         with:

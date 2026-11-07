@@ -8,7 +8,7 @@ extends Node3D
 #     Touch a key with a hand and it types / presses, like the ComputerKeyTrigger script it is based on:
 #       * 0.2 s cooldown per key
 #       * room codes are at most 6 characters
-#       * ENTER joins the room, BACKSPACE deletes a character
+#       * ENTER joins the room (online, through Net / server/gorilla_server.py), BACKSPACE deletes a character
 #   - F1/F2/F3 are OPTION 1/2/3, the arrow keys are UP/DOWN, F4 = ROOM, F5 = TURN, F6 = RANDOM ROOM.
 #   - the two notice boards (message of the day, code of conduct) get a green chalkboard face.
 
@@ -83,6 +83,7 @@ var _channel := 0 # 0 red, 1 green, 2 blue
 var _rgb := [5, 5, 5]
 var _turn := "SNAP"
 var _turn_speed := 5
+var _color_set := false # true once a colour was saved/picked; until then other players see the model's own fur
 
 func setup(map:Node, player_container:Node3D, body:Node) -> void:
 	_body = body
@@ -95,6 +96,12 @@ func setup(map:Node, player_container:Node3D, body:Node) -> void:
 	if _load():
 		_apply_color() # only recolour if you have saved a colour before
 	_apply_turn()
+	Net.room_joined.connect(_net_joined)
+	Net.join_failed.connect(_net_failed)
+	Net.room_left.connect(_net_left)
+	Net.status_changed.connect(_net_status)
+	Net.roster_changed.connect(_render)
+	_push_profile()
 	_render()
 
 func _surface_named(mi:MeshInstance3D, base:String) -> int:
@@ -351,7 +358,8 @@ func _key(id:String) -> void:
 		return
 	if id == "random" and _mode == "menu":
 		_mode = "message"
-		_typing = "JOINING RANDOM ROOM...\n\nOFFLINE: NO NETWORK IN THIS BUILD"
+		_typing = "JOINING RANDOM ROOM..."
+		Net.join_room("")
 		return
 	match _mode:
 		"message":
@@ -361,6 +369,7 @@ func _key(id:String) -> void:
 			elif id == "opt2" and _page == 0: _mode = "name"; _typing = _name
 			elif id == "opt3" and _page == 0: _mode = "color"
 			elif id == "opt1" and _page == 1: _mode = "turn"
+			elif id == "opt2" and _page == 1: Net.leave_room()
 			elif id == "down": _page = mini(_page + 1, 1)
 			elif id == "up": _page = maxi(_page - 1, 0)
 		"name", "room":
@@ -369,11 +378,12 @@ func _key(id:String) -> void:
 					_name = _typing
 					_save()
 				elif _mode == "room":
-					# ComputerKeyTrigger: ENTER hands the typed code to the network join call (none in this build)
+					# ComputerKeyTrigger: ENTER hands the typed code to the network join call
 					if _typing != "":
-						_room = _typing
 						_mode = "message"
-						_typing = "JOINING ROOM %s...\n\nOFFLINE: NO NETWORK IN THIS BUILD" % _room
+						var code := _typing
+						_typing = "JOINING ROOM %s..." % code
+						Net.join_room(code)
 						return
 				_mode = "menu"
 			elif id == "delete":
@@ -406,6 +416,7 @@ func _load() -> bool:
 	_rgb = [clampi(int(cf.get_value("computer", "r", _rgb[0])), 0, 9), clampi(int(cf.get_value("computer", "g", _rgb[1])), 0, 9), clampi(int(cf.get_value("computer", "b", _rgb[2])), 0, 9)]
 	_turn = str(cf.get_value("computer", "turn", _turn))
 	_turn_speed = clampi(int(cf.get_value("computer", "turn_speed", _turn_speed)), 1, 9)
+	_color_set = true
 	return true
 
 func _save() -> void:
@@ -417,6 +428,32 @@ func _save() -> void:
 	cf.set_value("computer", "turn", _turn)
 	cf.set_value("computer", "turn_speed", _turn_speed)
 	cf.save(SAVE_PATH)
+	_push_profile()
+
+func _push_profile() -> void:
+	Net.set_profile(_name, Color(_rgb[0] / 9.0, _rgb[1] / 9.0, _rgb[2] / 9.0), _color_set)
+
+func _net_joined(code:String) -> void:
+	_room = code
+	_mode = "message"
+	var n := Net.player_count()
+	_typing = "JOINED ROOM %s\n\n%d PLAYER%s IN ROOM" % [code, n, "" if n == 1 else "S"]
+	_render()
+
+func _net_failed(msg:String) -> void:
+	_room = ""
+	_mode = "message"
+	_typing = "COULD NOT JOIN\n\n%s" % msg
+	_render()
+
+func _net_left() -> void:
+	_room = ""
+	_render()
+
+func _net_status() -> void:
+	if _mode == "message" and Net.status != "":
+		_typing = Net.status
+		_render()
 
 func _apply_turn() -> void:
 	if _player_container != null and _player_container.has_method("set_turn"):
@@ -425,6 +462,7 @@ func _apply_turn() -> void:
 func _apply_color() -> void:
 	if _body != null and _body.has_method("set_gorilla_color"):
 		_body.set_gorilla_color(Color(_rgb[0] / 9.0, _rgb[1] / 9.0, _rgb[2] / 9.0))
+		_color_set = true
 		_save()
 
 func _render() -> void:
@@ -433,15 +471,18 @@ func _render() -> void:
 	var t := ""
 	match _mode:
 		"menu":
-			t = "GORILLA OS\n\nROOM: %s\nNAME: %s\n\n" % [_room if _room != "" else "-NOT CONNECTED-", _name]
+			var room_text := "-NOT CONNECTED-"
+			if _room != "":
+				room_text = "%s (%d)" % [_room, Net.player_count()]
+			t = "GORILLA OS\n\nROOM: %s\nNAME: %s\n\n" % [room_text, _name]
 			if _page == 0:
 				t += "F1: ROOM\nF2: NAME\nF3: COLOR\n\nDOWN ARROW: MORE"
 			else:
-				t += "F1: TURN\n\nUP ARROW: BACK"
+				t += "F1: TURN\nF2: LEAVE ROOM\n\nUP ARROW: BACK"
 		"name":
 			t = "ENTER YOUR NAME:\n\n> %s_\n\nENTER: SAVE\nBACKSPACE: ERASE" % _typing
 		"room":
-			t = "ENTER ROOM CODE (MAX 6):\n\n> %s_\n\nENTER: JOIN (OFFLINE)\nBACKSPACE: ERASE" % _typing
+			t = "ENTER ROOM CODE (MAX 6):\n\n> %s_\n\nENTER: JOIN\nBACKSPACE: ERASE" % _typing
 		"color":
 			t = "COLOR\n\n%sRED:   %d\n%sGREEN: %d\n%sBLUE:  %d\n\nF1-F3: PICK\nTYPE 0-9: SET\nENTER: BACK" % [
 				">" if _channel == 0 else " ", _rgb[0], ">" if _channel == 1 else " ", _rgb[1], ">" if _channel == 2 else " ", _rgb[2]]

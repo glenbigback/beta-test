@@ -51,6 +51,7 @@ var prev_left:Vector3
 var prev_right:Vector3
 
 func _ready() -> void:
+	add_to_group("gorilla_rig") # Net (net.gd) finds the local rig through this group
 	init()
 
 func _process(delta:float) -> void:
@@ -253,3 +254,18 @@ func store_velocities(delta:float) -> void:
 	velocity_average += (current_velocity - oldest_velocity) / float(velocity_history_size);
 	velocity_history[velocity_index] = current_velocity
 	previous_position = player.global_position
+
+# The pose sent to the other players in your room, world space (layout documented in remote_player.gd):
+# head position + rotation, both controller rotations, and where both gorilla hands are drawn.
+func get_net_pose() -> PackedFloat32Array:
+	var left_ctrl:Node3D = $Player/XROrigin3D/LeftHand
+	var hp := head.global_position
+	var hq := head.global_basis.orthonormalized().get_rotation_quaternion()
+	var lq := left_ctrl.global_basis.orthonormalized().get_rotation_quaternion()
+	var rq := right_ctrl.global_basis.orthonormalized().get_rotation_quaternion()
+	var lp := left_hand_follower.global_position
+	var rp := right_hand_follower.global_position
+	return PackedFloat32Array([
+		hp.x, hp.y, hp.z, hq.x, hq.y, hq.z, hq.w,
+		lq.x, lq.y, lq.z, lq.w, rq.x, rq.y, rq.z, rq.w,
+		lp.x, lp.y, lp.z, rp.x, rp.y, rp.z])

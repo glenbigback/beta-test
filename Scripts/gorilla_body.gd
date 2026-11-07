@@ -14,6 +14,7 @@ extends Node3D
 @export var model_scene:PackedScene = preload("res://Models/GorillaPlayer/scene.gltf")
 @export var model_scale:float = 0.75 # the raw model is ~1.27 units tall with ~0.95 long arms; 0.75 gives human-sized arms
 @export var hide_own_head:bool = true
+@export var make_mirror_copy:bool = true # off for other players' gorillas (remote_player.gd): they need no mirror double
 @export var hide_hand_spheres:bool = true # hide the debug spheres that used to be the hands
 @export var yaw_follow_speed:float = 10.0 # how fast the body turns to face where you look
 @export var eye_from_head_bone:Vector3 = Vector3(0.0, 0.105, 0.155) # eye position relative to the head bone (model units)
@@ -88,7 +89,8 @@ func _ready() -> void:
 		eye_local = global_transform.affine_inverse() * head_rest + eye_from_head_bone
 		if hide_own_head:
 			skeleton.set_bone_pose_scale(head_bone, Vector3.ONE * 0.001)
-	_make_mirror_copy()
+	if make_mirror_copy:
+		_make_mirror_copy()
 
 # A second copy of the gorilla that only the mirror camera can see. Same pose every frame, but its head
 # is NOT hidden and it carries the cosmetics you equip.
