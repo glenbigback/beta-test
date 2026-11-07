@@ -9,6 +9,9 @@ env:
   GODOT_VERSION: "4.3"
   PRESET_NAME: "BETA TEST"
 
+permissions:
+  contents: write # needed to publish the apk as a Release
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -100,3 +103,10 @@ jobs:
         with:
           name: BETA-TEST-apk
           path: build/BETA-TEST.apk
+
+      - name: Publish the apk as a Release (plain .apk download, no zip)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="beta-${{ github.run_number }}"
+          gh release create "$TAG" build/BETA-TEST.apk --title "BETA TEST $TAG" --notes "Debug-signed build for Quest. Download BETA-TEST.apk and install it."
