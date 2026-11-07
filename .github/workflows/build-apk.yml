@@ -77,18 +77,18 @@ jobs:
         if: hashFiles('addons/godotopenxrvendors/**') == ''
         env:
           GH_TOKEN: ${{ github.token }}
+          VENDORS_TAG: "3.1.2-stable" # a release that works with Godot 4.3
         run: |
-          mkdir -p plugin_dl
-          gh release download --repo GodotVR/godot_openxr_vendors --pattern '*.zip' --dir plugin_dl
-          for z in plugin_dl/*.zip; do
-            if unzip -l "$z" | grep -q "addons/godotopenxrvendors/"; then
-              unzip -q -o "$z" "*addons/godotopenxrvendors/*" -d plugin_unz || true
-            fi
-          done
+          mkdir -p plugin_dl plugin_unz addons
+          gh release download "$VENDORS_TAG" --repo GodotVR/godot_openxr_vendors --pattern 'godotopenxrvendorsaddon.zip' --dir plugin_dl
+          unzip -q plugin_dl/godotopenxrvendorsaddon.zip -d plugin_unz
           SRC=$(find plugin_unz -type d -name godotopenxrvendors -path "*addons*" | head -n1)
           echo "plugin found at: $SRC"
-          mkdir -p addons
           cp -r "$SRC" addons/
+          rm -rf plugin_dl plugin_unz
+          echo "--- plugin export options (for debugging) ---"
+          grep -rhn -E '"(meta_xr_features|xr_features|plugins)/[A-Za-z_]+"|name.*(meta|enable)' addons/godotopenxrvendors/export/*.gd 2>/dev/null | head -40 || true
+          grep -n "compatibility_minimum" addons/godotopenxrvendors/plugin.gdextension || true
 
       - name: Import the project
         run: godot --headless --path . --import || true

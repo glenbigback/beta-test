@@ -35,6 +35,7 @@ const SUN_COLOR := [
 const SUN_ENERGY := [0.0, 0.0, 0.3, 0.8, 1.0, 1.0, 1.0, 0.85, 0.3, 0.0, 0.0, 0.0, 0.0]
 const MOON_ENERGY := [0.25, 0.22, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.12, 0.22, 0.25, 0.25]
 const MOON_COLOR := Color(0.55, 0.65, 1.0)
+const CAVE_RAYS := [Vector3(0, 1, 0), Vector3(0.7, 1, 0), Vector3(-0.7, 1, 0), Vector3(0, 1, 0.7), Vector3(0, 1, -0.7)]
 
 # Where the sun is at noon (matches the original light in main.tscn) and the direction it travels towards.
 const NOON_DIR := Vector3(0.25, 0.866025, -0.433013)
@@ -243,13 +244,17 @@ func _physics_process(delta:float) -> void:
 	query.collision_mask = 1 # the map; the player and hands are on layer 2
 	var hit := space.intersect_ray(query)
 	_sheltered = not hit.is_empty()
-	# inside the caves / mines = inside the cave box AND something solid is overhead. (Part of the cave rock
-	# belongs to the Forest mesh, so we cannot ask whether the ceiling is "Cave_fixed" specifically.)
+	# inside the caves / mines = inside the cave box AND walled in overhead: rays straight up and slanted
+	# up in 4 directions must (nearly) all hit rock. Open forest (sky, thin branches, leaves) never does.
 	_in_cave = false
 	if _have_cave and _cave_box.grow(1.0).has_point(p):
-		var cq := PhysicsRayQueryParameters3D.create(p, p + Vector3.UP * 60.0)
-		cq.collision_mask = 1
-		_in_cave = not space.intersect_ray(cq).is_empty()
+		var hits := 0
+		for d in CAVE_RAYS:
+			var cq := PhysicsRayQueryParameters3D.create(p, p + d * 40.0)
+			cq.collision_mask = 1
+			if not space.intersect_ray(cq).is_empty():
+				hits += 1
+		_in_cave = hits >= 5
 	# the mines (but not the crystal room above them) get a bit more light than the other caves
 	_in_mines = _in_cave and _mines_box.size.length() > 0.01 and _mines_box.grow(1.0).has_point(p) \
 		and not (_crystal_box.size.length() > 0.01 and _crystal_box.grow(0.5).has_point(p))
