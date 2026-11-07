@@ -11,10 +11,10 @@ jobs:
           unzip -q dl/godotopenxrvendorsaddon.zip -d unz
           cat unz/asset/addons/godotopenxrvendors/plugin.gdextension | head -30
           find unz -name "*.so" | head
-          for f in $(find unz -path "*linux*" -name "*.so" | head -2); do
-            echo "== $f"
-            strings -n 6 "$f" | grep -E "xr_features|meta_xr|khronos_xr|pico_xr|plugins/|enable_.*_plugin|quest_support|eye_tracking|hand_tracking|passthrough|_support" | grep -v "^_Z" | sort -u | head -60
-          done
-          echo "== aar manifest hints"
-          unzip -p unz/asset/addons/godotopenxrvendors/.bin/android/debug/godotopenxr-meta-debug.aar AndroidManifest.xml | strings | head -40
-          unzip -l unz/asset/addons/godotopenxrvendors/.bin/android/debug/godotopenxr-meta-debug.aar | head -30
+          f=unz/asset/addons/godotopenxrvendors/.bin/linux/template_debug/x86_64/libgodotopenxrvendors.so
+          echo "== option-like strings"
+          strings -n 5 "$f" | grep -E "^[a-z_0-9]+/[a-z_0-9]+$" | sort -u | head -80
+          echo "== Quest / meta manifest strings"
+          strings -n 5 "$f" | grep -E "com.oculus|horizonos|supportedDevices|quest|vr.headtracking|intent.category" | sort -u | head -40
+          echo "== editor plugin hints"
+          strings -n 5 "$f" | grep -E "ExportPlugin|EditorPlugin|enable_|Enable " | sort -u | head -30
