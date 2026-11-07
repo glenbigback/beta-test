@@ -1,0 +1,35 @@
+[gd_scene load_steps=7 format=3 uid="uid://kgs6a41jieqo"]
+
+[ext_resource type="Script" path="res://Scripts/xr.gd" id="1_fbwps"]
+[ext_resource type="Script" path="res://Scripts/gtag_map.gd" id="9_gtag"]
+[ext_resource type="PackedScene" uid="uid://bkht4dgldahe" path="res://Scenes/player_container.tscn" id="4_gg425"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_rxj3w"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_ktjwq"]
+sky_material = SubResource("ProceduralSkyMaterial_rxj3w")
+
+[sub_resource type="Environment" id="Environment_10n85"]
+background_mode = 2
+sky = SubResource("Sky_ktjwq")
+tonemap_mode = 2
+glow_enabled = false
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_fbwps")
+
+[node name="Lighting" type="Node" parent="."]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Lighting"]
+transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
+shadow_enabled = false
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Lighting"]
+environment = SubResource("Environment_10n85")
+
+[node name="player_container" parent="." instance=ExtResource("4_gg425")]
+
+[node name="GTagMap" type="Node3D" parent="."]
+script = ExtResource("9_gtag")

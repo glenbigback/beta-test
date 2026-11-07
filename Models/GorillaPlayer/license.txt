@@ -1,0 +1,11 @@
+Model Information:
+* title:	Gorilla tag Player model
+* source:	https://sketchfab.com/3d-models/gorilla-tag-player-model-978a2885c9794dc38375cbc002b65daf
+* author:	S3ntaGT (https://sketchfab.com/S3ntaGT)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Gorilla tag Player model" (https://sketchfab.com/3d-models/gorilla-tag-player-model-978a2885c9794dc38375cbc002b65daf) by S3ntaGT (https://sketchfab.com/S3ntaGT) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

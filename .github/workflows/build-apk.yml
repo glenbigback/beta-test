@@ -1,0 +1,102 @@
+name: Build BETA TEST apk
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch: # lets you press "Run workflow" on the Actions tab
+
+env:
+  GODOT_VERSION: "4.3"
+  PRESET_NAME: "BETA TEST"
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unpack project.zip (if the project was uploaded as one zip)
+        if: hashFiles('project.zip') != ''
+        run: unzip -q -o project.zip
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK parts Godot 4.3 needs
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKM" ]; then
+            SDKM=$(find "$ANDROID_HOME" -name sdkmanager -type f | head -n1)
+          fi
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platform-tools" "build-tools;34.0.0" "platforms;android-34" "cmake;3.10.2.4988404" "ndk;23.2.8568313"
+
+      - name: Install Godot and its export templates
+        run: |
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl -fsSL -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q godot.zip
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+          unzip -q templates.tpz
+          mv templates "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+
+      - name: Debug signing key + Godot editor settings
+        run: |
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android \
+            -keystore "$HOME/debug.keystore" -storepass android \
+            -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+          mkdir -p "$HOME/.config/godot"
+          for f in editor_settings-4.tres editor_settings-${GODOT_VERSION}.tres; do
+            cat > "$HOME/.config/godot/$f" <<SETTINGS
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$HOME/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          export/android/force_system_user = false
+          export/android/shutdown_adb_on_exit = true
+          SETTINGS
+          done
+
+      - name: Android build template (needed for the VR / Quest plugin)
+        run: |
+          mkdir -p android/build
+          unzip -q "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/android_source.zip" -d android/build
+          echo "${GODOT_VERSION}.stable" > android/.build_version
+
+      - name: Download the Godot OpenXR Vendors plugin (Quest support)
+        if: hashFiles('addons/godotopenxrvendors/**') == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p plugin_dl
+          gh release download --repo GodotVR/godot_openxr_vendors --pattern '*.zip' --dir plugin_dl
+          for z in plugin_dl/*.zip; do
+            if unzip -l "$z" | grep -q "addons/godotopenxrvendors/"; then
+              unzip -q -o "$z" "*addons/godotopenxrvendors/*" -d plugin_unz || true
+            fi
+          done
+          SRC=$(find plugin_unz -type d -name godotopenxrvendors -path "*addons*" | head -n1)
+          echo "plugin found at: $SRC"
+          mkdir -p addons
+          cp -r "$SRC" addons/
+
+      - name: Import the project
+        run: godot --headless --path . --import || true
+
+      - name: Export the apk
+        run: |
+          mkdir -p build
+          godot --headless --path . --export-debug "$PRESET_NAME" build/BETA-TEST.apk
+          ls -la build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BETA-TEST-apk
+          path: build/BETA-TEST.apk

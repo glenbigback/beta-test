@@ -1,0 +1,11 @@
+Model Information:
+* title:	Gorilla tag fan computer
+* source:	https://sketchfab.com/3d-models/gorilla-tag-fan-computer-ca11b0f50deb42408a213e0fdc421d15
+* author:	owenguy333 (https://sketchfab.com/owenguy333)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Gorilla tag fan computer" (https://sketchfab.com/3d-models/gorilla-tag-fan-computer-ca11b0f50deb42408a213e0fdc421d15) by owenguy333 (https://sketchfab.com/owenguy333) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
